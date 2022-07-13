@@ -244,17 +244,24 @@ print(output_path)
 # COMMAND ----------
 
 # DBTITLE 1,Write total_num_acls and num_errors to the notebook exit value
-totals_df = (spark.read
+
+raw_output_df = (spark.read
       .format("JSON")
       .load(output_path)
-      .selectExpr(
-         "sum(1) AS total_num_acls"
-        ,"sum(CASE WHEN Principal = 'ERROR_!!!' THEN 1 ELSE 0 END) AS num_errors")
-     )
+    )
 
-res_rows = totals_df.collect()
+if raw_output_df.count() == 0 or (raw_output_df.count() == 1 and len(raw_output_df.columns) == 0):
+  exit_JSON_string = '{ "total_num_acls": 0, "num_errors": 0 }'
+else:
+  totals_df = (raw_output_df
+        .selectExpr(
+           "sum(1) AS total_num_acls"
+          ,"sum(CASE WHEN Principal = 'ERROR_!!!' THEN 1 ELSE 0 END) AS num_errors")
+       )
 
-exit_JSON_string = '{ "total_num_acls": '+str(res_rows[0]["total_num_acls"])+', "num_errors": '+str(res_rows[0]["num_errors"])+' }'
+  res_rows = totals_df.collect()
+
+  exit_JSON_string = '{ "total_num_acls": '+str(res_rows[0]["total_num_acls"])+', "num_errors": '+str(res_rows[0]["num_errors"])+' }'
 
 print(exit_JSON_string)
 
